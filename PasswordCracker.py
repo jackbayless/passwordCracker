@@ -1,4 +1,5 @@
 import hashlib
+from passlib.hash import md5_crypt, sha256_crypt, sha512_crypt, bcrypt, argon2
 
 
 
@@ -33,15 +34,15 @@ class PasswordCracker:
             parts = hash.split("$")
 
             if parts[1] == "1":
-                return ("md5-crypt", parts[2])  # salt
+                return "md5-crypt", parts[2]  # salt
             if parts[1] == "5":
-                return ("sha256-crypt", parts[2])
+                return "sha256-crypt", parts[2]
             if parts[1] == "6":
-                return ("sha512-crypt", parts[2])
+                return "sha512-crypt", parts[2]
             if parts[1].startswith("2"):
-                return ("bcrypt", parts[2][0:22])  # cost + salt
+                return "bcrypt", parts[2][0:22]  # cost + salt
             if parts[1].startswith("argon2"):
-                return ("argon2", "embedded")
+                return "argon2", "embedded"
 
         return None
 
@@ -59,12 +60,16 @@ class PasswordCracker:
         hash_type = self.detect_hash_type(hash)
 
         if hash_type is None:
-            print("Unsupported hash type, trying salted hash")
-            hash_type = self.detect_salted_hash(hash)
-
-        if hash_type is None:
-            print("Unsupported hash type")
-            return
+            salt_type = self.detect_salted_hash(hash)
+            if salt_type is not None:
+                type, salt = salt_type
+                print(f"Detected salted hash: {type}")
+                print(f"Salt: {salt}")
+                print("Use more advanced tool such as JTR")
+                return
+            else:
+                print("Demo does not support hash format")
+                return
 
 
         with open(filename, "r", errors="ignore") as file:
@@ -87,7 +92,9 @@ password = "Wendy"
 
 enc_password = password.encode("utf-8")
 password_hash = hashlib.sha1(enc_password.strip()).hexdigest()
+password_salted_hash = sha512_crypt.hash(password)
 
 pc = PasswordCracker()
 pc.crack_password(password_hash, pass_filename)
+pc.crack_password(password_salted_hash, pass_filename)
 
